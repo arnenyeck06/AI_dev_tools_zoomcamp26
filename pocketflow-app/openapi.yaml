@@ -1,0 +1,517 @@
+openapi: 3.1.0
+info:
+  title: PocketFlow API
+  description: >
+    Shared expense tracker for a two-person household. Derived from the
+    contract already defined in frontend/src/api/types.ts and client.ts.
+  version: "0.1.0"
+
+servers:
+  - url: http://localhost:8000
+
+tags:
+  - name: categories
+  - name: members
+  - name: expenses
+  - name: recurring-bills
+  - name: budgets
+  - name: trends
+
+paths:
+  /categories:
+    get:
+      tags: [categories]
+      summary: List fixed spending categories.
+      operationId: listCategories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /members:
+    get:
+      tags: [members]
+      summary: List household members.
+      operationId: listMembers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  /expenses:
+    get:
+      tags: [expenses]
+      summary: List expenses, optionally filtered by month.
+      operationId: listExpenses
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/MonthKey"
+          description: yyyy-mm. When set, only expenses in that month are returned.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      tags: [expenses]
+      summary: Create a new expense.
+      operationId: createExpense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewExpense"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /expenses/{expenseId}:
+    parameters:
+      - name: expenseId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      tags: [expenses]
+      summary: Partially update an expense.
+      operationId: updateExpense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpensePatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [expenses]
+      summary: Delete an expense.
+      operationId: deleteExpense
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /recurring-bills:
+    get:
+      tags: [recurring-bills]
+      summary: List known recurring bill templates.
+      operationId: listRecurringBills
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecurringBillTemplate"
+
+  /recurring-bills/suggestions:
+    get:
+      tags: [recurring-bills]
+      summary: One suggestion per known bill, with its status for the given month.
+      operationId: getRecurringSuggestions
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/MonthKey"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecurringSuggestion"
+
+  /recurring-bills/{billId}/confirm:
+    parameters:
+      - name: billId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [recurring-bills]
+      summary: Confirm a bill for a month, creating the expense it represents.
+      description: >
+        Recurring bills are never auto-created; this endpoint is the only
+        way a bill becomes an expense, and always requires explicit
+        confirmation with (possibly overridden) amount/date/payer.
+      operationId: confirmRecurringBill
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/MonthKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurringBillConfirmation"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /recurring-bills/{billId}/dismiss:
+    parameters:
+      - name: billId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [recurring-bills]
+      summary: Dismiss a bill's suggestion for a month.
+      operationId: dismissRecurringBill
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/MonthKey"
+      responses:
+        "204":
+          description: Dismissed
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /recurring-bills/{billId}/undo:
+    parameters:
+      - name: billId
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [recurring-bills]
+      summary: Revert a confirmed or dismissed bill back to pending for a month.
+      operationId: undoRecurringBill
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/MonthKey"
+      responses:
+        "204":
+          description: Reverted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /budgets:
+    get:
+      tags: [budgets]
+      summary: List monthly budgets per category.
+      operationId: listBudgets
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Budget"
+
+  /budgets/{categoryId}:
+    parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/CategoryId"
+    put:
+      tags: [budgets]
+      summary: Set (create or replace) the monthly budget for a category.
+      operationId: setBudget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetAmount"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /trends/monthly:
+    get:
+      tags: [trends]
+      summary: Category totals for the last N months, oldest first, ending at the current month.
+      operationId: getMonthlyTrends
+      parameters:
+        - name: count
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyCategoryTotals"
+
+components:
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+
+    CategoryId:
+      type: string
+      enum:
+        - rent
+        - utilities
+        - groceries
+        - dining
+        - transport
+        - entertainment
+        - health
+        - other
+
+    MonthKey:
+      type: string
+      pattern: '^\d{4}-\d{2}$'
+      description: yyyy-mm
+
+    DateISO:
+      type: string
+      format: date
+      description: yyyy-mm-dd
+
+    Category:
+      type: object
+      required: [id, name, slot]
+      properties:
+        id:
+          $ref: "#/components/schemas/CategoryId"
+        name:
+          type: string
+        slot:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Fixed order, used to pick a stable chart color per category.
+
+    Member:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Expense:
+      type: object
+      required: [id, amount, categoryId, date, payerId]
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        categoryId:
+          $ref: "#/components/schemas/CategoryId"
+        date:
+          $ref: "#/components/schemas/DateISO"
+        payerId:
+          type: string
+        note:
+          type: string
+        sourceBillId:
+          type: string
+          description: Set when this expense was created by confirming a recurring bill.
+
+    NewExpense:
+      type: object
+      required: [amount, categoryId, date, payerId]
+      properties:
+        amount:
+          type: number
+        categoryId:
+          $ref: "#/components/schemas/CategoryId"
+        date:
+          $ref: "#/components/schemas/DateISO"
+        payerId:
+          type: string
+        note:
+          type: string
+
+    ExpensePatch:
+      type: object
+      properties:
+        amount:
+          type: number
+        categoryId:
+          $ref: "#/components/schemas/CategoryId"
+        date:
+          $ref: "#/components/schemas/DateISO"
+        payerId:
+          type: string
+        note:
+          type: string
+
+    RecurringBillTemplate:
+      type: object
+      required: [id, name, categoryId, amount, dueDayOfMonth, defaultPayerId]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        categoryId:
+          $ref: "#/components/schemas/CategoryId"
+        amount:
+          type: number
+        dueDayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 31
+        defaultPayerId:
+          type: string
+
+    BillStatus:
+      type: string
+      enum: [pending, confirmed, dismissed]
+
+    RecurringSuggestion:
+      type: object
+      required: [bill, month, status, suggestedDate]
+      properties:
+        bill:
+          $ref: "#/components/schemas/RecurringBillTemplate"
+        month:
+          $ref: "#/components/schemas/MonthKey"
+        status:
+          $ref: "#/components/schemas/BillStatus"
+        expenseId:
+          type: string
+          description: Present once confirmed.
+        expenseAmount:
+          type: number
+        expenseDate:
+          $ref: "#/components/schemas/DateISO"
+        suggestedDate:
+          $ref: "#/components/schemas/DateISO"
+          description: Default date for the confirmation form, derived from dueDayOfMonth.
+
+    RecurringBillConfirmation:
+      type: object
+      required: [amount, date, payerId]
+      properties:
+        amount:
+          type: number
+        date:
+          $ref: "#/components/schemas/DateISO"
+        payerId:
+          type: string
+        note:
+          type: string
+
+    Budget:
+      type: object
+      required: [categoryId, amount]
+      properties:
+        categoryId:
+          $ref: "#/components/schemas/CategoryId"
+        amount:
+          type: number
+
+    BudgetAmount:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+
+    MonthlyCategoryTotals:
+      type: object
+      required: [month, totals, total]
+      properties:
+        month:
+          $ref: "#/components/schemas/MonthKey"
+        totals:
+          type: object
+          additionalProperties:
+            type: number
+          description: Map of CategoryId to total amount spent that month.
+        total:
+          type: number
