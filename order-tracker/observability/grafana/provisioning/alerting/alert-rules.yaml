@@ -1,0 +1,60 @@
+# Grafana-managed alert: fires when order lookups return any 5xx response
+# within the last 5 minutes.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: order-tracker
+    folder: Order Tracker
+    interval: 30s
+    rules:
+      - uid: order-lookup-5xx
+        title: Order lookup 5xx responses
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # 5xx count per endpoint over the last 5 minutes. The second half
+              # returns 0 for endpoints with traffic but no 5xx, so the rule
+              # evaluates to Normal (not No Data) when things are healthy.
+              expr: >-
+                sum by (http_route) (increase(order_lookups_total{http_response_status_code=~"5.."}[5m]))
+                or
+                sum by (http_route) (increase(order_lookups_total[5m])) * 0
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+        # No series at all (no traffic, or Prometheus has no data yet) is not
+        # an incident: treat it as OK rather than raising a No Data alert.
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: critical
+          service: order-tracker
+          window: 5m
+        annotations:
+          summary: "5xx responses on GET {{ $labels.http_route }}"
+          description: >-
+            GET {{ $labels.http_route }} returned {{ printf "%.0f" $values.A.Value }}
+            5xx response(s) in the last 5 minutes.
+          endpoint: "GET {{ $labels.http_route }}"
+          window: 5m
+          # Grafana also adds dashboard/panel links (from GF_SERVER_ROOT_URL) to notifications.
+          dashboard_url: "http://127.0.0.1:3000/d/order-tracker?from=now-30m&to=now&viewPanel=6"
+          # Lets Grafana link the alert to the "Errors per second" panel.
+          __dashboardUid__: order-tracker
+          __panelId__: "6"
