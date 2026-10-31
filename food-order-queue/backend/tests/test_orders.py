@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import create_engine
@@ -77,3 +79,62 @@ def test_rejects_invalid_orders(client, bad):
 
 def test_missing_order(client):
     assert client.get("/api/orders/999").status_code == 404
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    """Lets a test move time forward: clock.now += timedelta(...)."""
+    class Clock:
+        now = datetime(2026, 10, 31, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(main, "utcnow", lambda: Clock.now)
+    return Clock
+
+
+def flag_reasons(order):
+    return [(f["source"], f["severity"]) for f in order["flags"]]
+
+
+def test_large_order_is_flagged_and_flag_is_saved(client):
+    order = place(client, "Ana", quantity=21)
+
+    assert flag_reasons(order) == [("rule", "medium")]
+    assert client.get(f"/api/orders/{order['id']}").json()["flags"] == order["flags"]
+    assert client.get("/api/orders").json()[0]["flags"] == order["flags"]
+
+
+def test_repeat_orders_from_one_phone_are_flagged(client):
+    first = place(client, "Ana")
+    second = place(client, "Ana")         # same item within 2 minutes
+    third = place(client, "Ana", item="Fries")  # third order in 10 minutes
+    other = place(client, "Ben", phone="555-0199")
+
+    assert first["flags"] == []
+    assert flag_reasons(second) == [("rule", "medium")]
+    assert flag_reasons(third) == [("rule", "high")]
+    assert other["flags"] == []
+    assert all("555" not in f["reason"] and "Ana" not in f["reason"] for f in second["flags"] + third["flags"])
+
+
+def test_flags_never_change_fifo_order(client):
+    normal = place(client, "Ana")
+    flagged = place(client, "Ben", phone="555-0199", quantity=50)
+    later = place(client, "Cy", phone="555-0142")
+
+    assert flagged["position"] == 2
+    assert [client.post("/api/orders/next").json()["id"] for _ in range(3)] == [
+        normal["id"], flagged["id"], later["id"],
+    ]
+
+
+def test_long_wait_flag_compares_with_usual_wait(client, clock):
+    served = place(client, "Ana")
+    waiting = place(client, "Ben", phone="555-0199")
+    clock.now += timedelta(minutes=5)
+    client.post("/api/orders/next")  # usual wait is now 5 minutes
+
+    clock.now += timedelta(minutes=9)  # Ben has waited 14 minutes
+    assert client.get(f"/api/orders/{waiting['id']}").json()["flags"] == []
+
+    clock.now += timedelta(minutes=2)  # 16 minutes: over 15 and over 2 x 5
+    assert flag_reasons(client.get(f"/api/orders/{waiting['id']}").json()) == [("rule", "low")]
+    assert client.get(f"/api/orders/{served['id']}").json()["flags"] == []  # only waiting orders

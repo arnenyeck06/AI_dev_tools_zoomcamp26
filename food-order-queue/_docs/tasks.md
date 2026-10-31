@@ -7,7 +7,7 @@ Planned work, in order. The live tracker is [GitHub Issues](https://github.com/a
 | T1 | Orders API with FIFO serving | backend | Done (`92e741f`) |
 | T2 | Customer order form and staff dashboard | frontend | Done (`71544a5`) |
 | T3 | Project docs: README, spec, AGENTS.md, agent team, process | docs | In progress |
-| T4 | Rule-based anomaly flags | backend, frontend | To do |
+| T4 | Rule-based anomaly flags | backend, frontend | Done (#4) |
 | T5 | AI order check with Claude | backend, ai | To do |
 | T6 | Frontend tests | frontend | To do |
 | T7 | Integration tests | backend, frontend | To do |
@@ -54,11 +54,11 @@ Spec §F1, F2, F5.
 
 Spec §F6.
 
-- [ ] `flags` table; flags returned with each order
-- [ ] Burst, duplicate, large-quantity, and long-wait rules with the spec thresholds
-- [ ] Unit tests just below and just above each threshold
-- [ ] Staff dashboard shows a badge with the reason; high severity stands out
-- [ ] Flagged orders keep their FIFO position
+- [x] `flags` table; flags returned with each order
+- [x] Burst, duplicate, large-quantity, and long-wait rules with the spec thresholds
+- [x] Unit tests just below and just above each threshold
+- [x] Staff dashboard shows a badge with the reason; high severity stands out
+- [x] Flagged orders keep their FIFO position
 
 ## T5. AI order check with Claude
 

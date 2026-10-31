@@ -12,6 +12,12 @@
   --done: #2f9e44;
   --error: #c92a2a;
   --error-bg: #fff0f0;
+  --flag-high: #c92a2a;
+  --flag-high-bg: #ffe3e3;
+  --flag-medium: #a65b00;
+  --flag-medium-bg: #fff3d6;
+  --flag-low: #5c5f66;
+  --flag-low-bg: #eceef1;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
 
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -36,6 +42,12 @@
     --done: #51cf66;
     --error: #ff8787;
     --error-bg: #3a1d1d;
+    --flag-high: #ffa8a8;
+    --flag-high-bg: #4a1f1f;
+    --flag-medium: #ffd43b;
+    --flag-medium-bg: #3d3214;
+    --flag-low: #c1c2c5;
+    --flag-low-bg: #2c2a31;
     --shadow: none;
     color-scheme: dark;
   }

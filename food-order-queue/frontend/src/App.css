@@ -315,3 +315,49 @@ button.small {
   font-size: 0.85rem;
   font-style: italic;
 }
+
+/* Anomaly flags: they inform staff, they never reorder the queue. */
+.order-card.flagged-high {
+  border-color: var(--flag-high);
+  box-shadow: inset 4px 0 0 var(--flag-high);
+}
+
+.flags {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.flag {
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--flag-color);
+  background: var(--flag-bg);
+}
+
+.flag-severity {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.flag-high {
+  --flag-color: var(--flag-high);
+  --flag-bg: var(--flag-high-bg);
+  font-weight: 600;
+}
+
+.flag-medium {
+  --flag-color: var(--flag-medium);
+  --flag-bg: var(--flag-medium-bg);
+}
+
+.flag-low {
+  --flag-color: var(--flag-low);
+  --flag-bg: var(--flag-low-bg);
+}
