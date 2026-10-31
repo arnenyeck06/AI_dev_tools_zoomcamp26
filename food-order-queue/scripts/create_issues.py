@@ -78,6 +78,13 @@ def gh(*args, apply):
 
 
 def main(apply):
+    existing = subprocess.run(
+        ["gh", "issue", "list", "--repo", REPO, "--label", "food-order-queue", "--state", "all", "--json", "number"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    if existing not in ("", "[]"):
+        sys.exit("Issues labelled food-order-queue already exist; not creating them again.")
+
     tasks = parse_tasks(TASKS.read_text())
     print(f"{'Creating' if apply else 'Dry run:'} {len(LABELS)} labels and {len(tasks)} issues in {REPO}\n")
 
