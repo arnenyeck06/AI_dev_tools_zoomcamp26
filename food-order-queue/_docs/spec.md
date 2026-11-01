@@ -61,19 +61,19 @@ A customer submits name, phone, item, quantity, and an optional note.
 
 ### F6. Rule-based anomaly flags
 
-Each new order is checked against these rules. A matching order gets a flag with `source = rule`, a `reason`, and a `severity`.
+Each new order is checked against these rules. Long wait is checked whenever a waiting order is read, so it appears as time passes. A matching order gets a flag with `source = rule`, a `reason`, and a `severity`.
 
 | Rule | Default threshold | Severity |
 | --- | --- | --- |
 | Burst: same phone places several orders quickly | ≥ 3 orders in 10 minutes | high |
 | Duplicate: same phone and same item | within 2 minutes | medium |
 | Large quantity | quantity > 20 | medium |
-| Long wait: order still waiting much longer than usual | > 2× the median wait and > 15 minutes | low |
+| Long wait: order still waiting much longer than usual | > 2× the median wait of the last 50 served orders and > 15 minutes | low |
 
-- [ ] Each rule has unit tests for "just below" and "just above" its threshold.
-- [ ] Flags are returned with the order (`flags: [{source, reason, severity}]`).
-- [ ] The staff dashboard shows a badge per flag with its reason; high severity is visually distinct.
-- [ ] Flagged orders stay in the queue in FIFO order (flags never reorder or reject orders).
+- [x] Each rule has unit tests for "just below" and "just above" its threshold.
+- [x] Flags are returned with the order (`flags: [{source, reason, severity}]`).
+- [x] The staff dashboard shows a badge per flag with its reason; high severity is visually distinct.
+- [x] Flagged orders stay in the queue in FIFO order (flags never reorder or reject orders).
 
 ### F7. AI order check
 
@@ -115,7 +115,7 @@ When an order has a note, the backend asks Claude to classify it.
 
 ## 7. Data model
 
-**orders**: `id`, `customer_name`, `phone`, `item`, `quantity`, `note`, `status`, `created_at`
+**orders**: `id`, `customer_name`, `phone`, `item`, `quantity`, `note`, `status`, `created_at`, `served_at`
 
 **flags** (F6/F7): `id`, `order_id`, `source` (`rule` / `ai`), `reason`, `severity`, `created_at`
 

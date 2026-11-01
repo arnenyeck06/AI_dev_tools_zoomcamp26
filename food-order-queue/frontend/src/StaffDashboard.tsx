@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, minutesSince, type Order, type OrderStatus } from './api'
+import { api, minutesSince, type Flag, type Order, type OrderStatus } from './api'
 import { usePolling } from './usePolling'
 
 const COLUMNS: { status: OrderStatus; title: string }[] = [
@@ -38,6 +38,7 @@ export function StaffDashboard() {
 
   const byStatus = (status: OrderStatus) => orders.filter((o) => o.status === status)
   const waiting = byStatus('waiting')
+  const flagged = orders.filter((o) => o.status !== 'done' && o.flags.length > 0).length
   const averageWait = waiting.length
     ? Math.round(waiting.reduce((sum, o) => sum + minutesSince(o.created_at), 0) / waiting.length)
     : 0
@@ -50,6 +51,7 @@ export function StaffDashboard() {
           <Stat label="In progress" value={byStatus('in_progress').length} />
           <Stat label="Done" value={byStatus('done').length} />
           <Stat label="Avg wait" value={`${averageWait} min`} />
+          <Stat label="Flagged" value={flagged} />
         </div>
         <button onClick={() => act(api.serveNext)} disabled={busy || waiting.length === 0}>
           Serve next
@@ -94,7 +96,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 function OrderCard({ order, onDone, busy }: { order: Order; onDone: () => void; busy: boolean }) {
   return (
-    <article className="order-card">
+    <article className={`order-card${order.flags.some((f) => f.severity === 'high') ? ' flagged-high' : ''}`}>
       <header>
         <span className="ticket-id">#{order.id}</span>
         {order.position !== null && <span className="position">{order.position === 1 ? 'Next' : `#${order.position} in line`}</span>}
@@ -107,11 +109,26 @@ function OrderCard({ order, onDone, busy }: { order: Order; onDone: () => void; 
         {order.customer_name} · {order.phone}
       </p>
       {order.note && <p className="note">“{order.note}”</p>}
+      {order.flags.length > 0 && (
+        <ul className="flags" aria-label="Flags">
+          {order.flags.map((flag, i) => (
+            <FlagBadge key={i} flag={flag} />
+          ))}
+        </ul>
+      )}
       {order.status === 'in_progress' && (
         <button className="small" onClick={onDone} disabled={busy}>
           Mark done
         </button>
       )}
     </article>
+  )
+}
+
+function FlagBadge({ flag }: { flag: Flag }) {
+  return (
+    <li className={`flag flag-${flag.severity}`} title={`${flag.severity} severity, ${flag.source === 'ai' ? 'AI check' : 'rule'}`}>
+      <span className="flag-severity">{flag.severity}</span> {flag.reason}
+    </li>
   )
 }

@@ -10,11 +10,20 @@ export interface NewOrder {
   note?: string
 }
 
+export type Severity = 'low' | 'medium' | 'high'
+
+export interface Flag {
+  source: 'rule' | 'ai'
+  reason: string
+  severity: Severity
+}
+
 export interface Order extends NewOrder {
   id: number
   status: OrderStatus
   created_at: string
   position: number | null
+  flags: Flag[]
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
