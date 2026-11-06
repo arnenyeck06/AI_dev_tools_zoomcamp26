@@ -37,17 +37,36 @@ Full requirements and acceptance criteria: [`_docs/spec.md`](_docs/spec.md). Pro
 
 ## Tech stack
 
-| Layer | Choice |
+| Layer | Choice | Role |
+| --- | --- | --- |
+| Frontend | React + Vite + TypeScript | Customer page and staff dashboard; all API calls go through `src/api.ts` |
+| Backend | FastAPI (Python 3.12) + SQLModel | REST API under `/api`: FIFO queue, anomaly rules, OpenAPI docs at `/docs` |
+| Database | SQLite locally, PostgreSQL in Docker Compose | Orders and flags; `DATABASE_URL` picks the database |
+| Web server | nginx (in Docker) | Serves the built React app and forwards `/api` to the backend |
+| Containers | Docker Compose | Runs database, backend, and frontend with one command |
+| AI | Claude API (order note check) | Planned |
+
+See [`_docs/architecture.md`](_docs/architecture.md) for how the parts fit together.
+
+## Run it with Docker (one command)
+
+You need [Docker](https://docs.docker.com/get-docker/) with Compose.
+
+```bash
+docker compose up --build
+```
+
+| URL | What |
 | --- | --- |
-| Frontend | React + Vite + TypeScript |
-| Backend | FastAPI (Python 3.12) + SQLModel |
-| Database | SQLite for local development, PostgreSQL in Docker Compose |
-| AI | Claude API (order note check) |
-| Observability | OpenTelemetry → Prometheus, Loki, Tempo, Grafana |
+| <http://localhost:8080> | Customer page |
+| <http://localhost:8080/#/staff> | Staff dashboard |
+| <http://localhost:8080/docs> | API docs (OpenAPI) |
 
-## Run it locally
+Data is stored in PostgreSQL in the `pgdata` volume, so it survives `docker compose down` and restarts. To start over with an empty database: `docker compose down -v`.
 
-You need Python 3.12 with [uv](https://docs.astral.sh/uv/) and Node.js 20+.
+## Run it locally for development
+
+Uses SQLite (`backend/orders.db`) and hot reload. You need Python 3.12 with [uv](https://docs.astral.sh/uv/) and Node.js 20+.
 
 ```bash
 # API (http://localhost:8010, docs at /docs)
@@ -59,7 +78,7 @@ cd frontend && npm install && npm run dev
 
 Open <http://localhost:5173> for the customer page and <http://localhost:5173/#/staff> for the staff dashboard. The frontend proxies `/api` to the backend.
 
-> A single-command start with Docker Compose is planned; see the task tracker.
+If you pull a change that adds database columns, delete `backend/orders.db` once; it is recreated on start.
 
 ### AI check setup
 
@@ -75,6 +94,14 @@ ANTHROPIC_API_KEY=sk-ant-...
 cd backend && uv run python -m pytest -q
 ```
 
+The tests use a fresh SQLite file per test. To run the same tests against PostgreSQL:
+
+```bash
+docker run -d --rm --name orders-test-db -e POSTGRES_USER=orders -e POSTGRES_PASSWORD=orders -e POSTGRES_DB=orders -p 55432:5432 postgres:17-alpine
+cd backend && TEST_DATABASE_URL=postgresql+psycopg://orders:orders@localhost:55432/orders uv run python -m pytest -q
+docker stop orders-test-db
+```
+
 ## Project structure
 
 ```
@@ -87,6 +114,7 @@ food-order-queue/
 │   ├── agents.md      # Agent team: roles and how they work together
 │   ├── process.md     # Workflow: issue → branch → tests → PR → deploy
 │   └── tasks.md       # Task list (mirrored in GitHub Issues)
-├── backend/           # FastAPI app and tests
-└── frontend/          # React app
+├── docker-compose.yml # db + api + web, one command
+├── backend/           # FastAPI app, tests, Dockerfile
+└── frontend/          # React app, Dockerfile, nginx.conf
 ```
