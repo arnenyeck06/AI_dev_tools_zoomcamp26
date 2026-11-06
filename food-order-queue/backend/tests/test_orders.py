@@ -1,17 +1,23 @@
 from datetime import datetime, timedelta, timezone
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import create_engine
+from sqlmodel import SQLModel
 
 import main
 
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    monkeypatch.setattr(main, "engine", create_engine(f"sqlite:///{tmp_path / 'test.db'}"))
+    """A fresh database per test: a SQLite file, or PostgreSQL when TEST_DATABASE_URL is set."""
+    engine = main.make_engine(os.getenv("TEST_DATABASE_URL", f"sqlite:///{tmp_path / 'test.db'}"))
+    SQLModel.metadata.drop_all(engine)
+    monkeypatch.setattr(main, "engine", engine)
     with TestClient(main.app) as test_client:
         yield test_client
+    engine.dispose()
 
 
 def place(client, name, **extra):

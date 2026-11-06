@@ -11,7 +11,7 @@ Planned work, in order. The live tracker is [GitHub Issues](https://github.com/a
 | T5 | AI order check with Claude | backend, ai | To do |
 | T6 | Frontend tests | frontend | To do |
 | T7 | Integration tests | backend, frontend | To do |
-| T8 | Docker Compose with PostgreSQL, single-command start | infra | To do |
+| T8 | Docker Compose with PostgreSQL, single-command start | infra | Done (#8) |
 | T9 | Observability for the order journey | backend, infra | To do |
 | T10 | Alert on user impact | infra | To do |
 | T11 | On-call agent | infra, ai | To do |
@@ -84,9 +84,9 @@ Spec §F7.
 
 ## T8. Docker Compose with PostgreSQL
 
-- [ ] Dockerfiles for backend and frontend
-- [ ] `docker compose up` starts frontend, backend, and PostgreSQL; data survives restarts
-- [ ] README documents the single command
+- [x] Dockerfiles for backend and frontend
+- [x] `docker compose up` starts frontend, backend, and PostgreSQL; data survives restarts
+- [x] README documents the single command
 
 ## T9. Observability for the order journey
 

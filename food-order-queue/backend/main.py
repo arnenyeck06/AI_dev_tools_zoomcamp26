@@ -10,8 +10,17 @@ from sqlmodel import Field, Session, SQLModel, create_engine, func, select
 
 import flags
 
+# SQLite file locally; PostgreSQL in Docker Compose, e.g. postgresql+psycopg://user:pass@db:5432/orders
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///orders.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+
+def make_engine(url):
+    if url.startswith("sqlite"):
+        return create_engine(url, connect_args={"check_same_thread": False})
+    return create_engine(url, pool_pre_ping=True)
+
+
+engine = make_engine(DATABASE_URL)
 USUAL_WAIT_SAMPLE = 50  # served orders used to compute the usual wait
 
 
@@ -167,7 +176,10 @@ def get_order(order_id: int, session: Session = Depends(get_session)):
 @app.post("/api/orders/next", response_model=OrderOut)
 def serve_next(session: Session = Depends(get_session)):
     """Staff take the oldest waiting order; nobody can skip the line."""
-    order = session.exec(select(Order).where(Order.status == "waiting").order_by(Order.id)).first()
+    # FOR UPDATE SKIP LOCKED: two staff pressing at once on PostgreSQL get different orders (SQLite ignores it)
+    order = session.exec(
+        select(Order).where(Order.status == "waiting").order_by(Order.id).limit(1).with_for_update(skip_locked=True)
+    ).first()
     if order is None:
         raise HTTPException(404, "No waiting orders")
     order.status = "in_progress"
