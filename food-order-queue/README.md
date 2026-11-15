@@ -21,7 +21,7 @@ Small food businesses often take orders on paper, by phone, or through chat mess
 | Staff | See a live dashboard of orders in **Waiting**, **In progress**, and **Done** |
 | Staff | Press **Serve next** to take the oldest waiting order: nobody can skip the line |
 | Staff | Mark orders done; see queue stats (waiting count, average wait) |
-| Staff | See **anomaly flags** with a reason on suspicious orders (rule-based checks plus an AI check of the order note) |
+| Staff | See **anomaly flags** with a reason on suspicious orders (rule-based checks; an AI check of the order note is planned, see [#5](https://github.com/arnenyeck06/AI_dev_tools_zoomcamp26/issues/5)) |
 
 ## Expected behavior
 
@@ -30,7 +30,7 @@ Small food businesses often take orders on paper, by phone, or through chat mess
 - An order goes `waiting → in_progress → done`, never backwards and never skipping a step.
 - Invalid orders (empty name, phone too short, quantity outside 1–100) are rejected with a clear error.
 - Flagged orders are **still served in FIFO order**; the flag is a warning for staff, not a rejection.
-- If the AI check is unavailable, orders are still accepted and only the rule-based flags apply.
+- Once the AI check is added (#5), orders are still accepted when it is unavailable; only the rule-based flags apply.
 - Orders persist across restarts.
 
 Full requirements and acceptance criteria: [`_docs/spec.md`](_docs/spec.md). Progress is tracked in [GitHub Issues](https://github.com/arnenyeck06/AI_dev_tools_zoomcamp26/issues).
@@ -44,7 +44,7 @@ Full requirements and acceptance criteria: [`_docs/spec.md`](_docs/spec.md). Pro
 | Database | SQLite locally, PostgreSQL in Docker Compose | Orders and flags; `DATABASE_URL` picks the database |
 | Web server | nginx (in Docker) | Serves the built React app and forwards `/api` to the backend |
 | Containers | Docker Compose | Runs database, backend, and frontend with one command |
-| AI | Claude API (order note check) | Planned |
+| AI (planned) | Claude API | Will check order notes for suspicious content ([#5](https://github.com/arnenyeck06/AI_dev_tools_zoomcamp26/issues/5)); not built yet |
 
 See [`_docs/architecture.md`](_docs/architecture.md) for how the parts fit together.
 
@@ -80,13 +80,9 @@ Open <http://localhost:5173> for the customer page and <http://localhost:5173/#/
 
 If you pull a change that adds database columns, delete `backend/orders.db` once; it is recreated on start.
 
-### AI check setup
+### AI check (planned)
 
-Put your Anthropic API key in `backend/.env` (git-ignored):
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+The AI check ([#5](https://github.com/arnenyeck06/AI_dev_tools_zoomcamp26/issues/5)) is not built yet, so the app needs no API key. When it is added, it will read `ANTHROPIC_API_KEY` from `backend/.env` (git-ignored).
 
 ## Tests
 
