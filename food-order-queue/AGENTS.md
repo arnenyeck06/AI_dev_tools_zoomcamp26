@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code and others) working in `food-orde
 
 ## What this project is
 
-A FIFO food order queue: customers place orders, staff serve them in arrival order, and suspicious orders get flagged by rules and an AI check. See [`README.md`](README.md) for the overview.
+A FIFO food order queue: customers place orders, staff serve them in arrival order, and suspicious orders get flagged by rules (an AI check is planned, #5). See [`README.md`](README.md) for the overview.
 
 ## Docs map
 
